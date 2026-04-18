@@ -64,6 +64,10 @@ if(APPLE)
     set_property(TARGET libobs-metal PROPERTY LINKER_LANGUAGE CXX)
   endif()
   
+  if(TARGET OBS::libobs-metal)
+    set_property(TARGET OBS::libobs-metal PROPERTY LINKER_LANGUAGE CXX)
+  endif()
+  
   if(TARGET OBS::obs-frontend-api)
     set_property(TARGET OBS::obs-frontend-api PROPERTY LINKER_LANGUAGE CXX)
   endif()
