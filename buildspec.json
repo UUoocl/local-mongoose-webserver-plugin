@@ -1,12 +1,12 @@
 {
     "dependencies": {
         "obs-studio": {
-            "version": "32.1.1",
+            "version": "31.1.0",
             "baseUrl": "https://github.com/obsproject/obs-studio/archive/refs/tags",
             "label": "OBS sources",
             "hashes": {
-                "macos": "800a394671770794d8a453d3939b38605971b08e89634160f28c74ca62f62492",
-                "windows-x64": "800a394671770794d8a453d3939b38605971b08e89634160f28c74ca62f62492"
+                "macos": "ba903f3848cfabd9ea1205aea14b69e83a2eb43ad6f3f7cc80a6a900bce0e56e",
+                "windows-x64": "ba903f3848cfabd9ea1205aea14b69e83a2eb43ad6f3f7cc80a6a900bce0e56e"
             }
         },
         "prebuilt": {
