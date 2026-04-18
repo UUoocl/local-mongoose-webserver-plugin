@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.15)
+
 # Replace lines 57-81 with:
 
 foreach(target_name libobs-metal libobs-metal-objc libobs-metal-objcxx)
