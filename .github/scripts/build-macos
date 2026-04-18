@@ -118,9 +118,12 @@ build() {
   cmake --build . --config ${config} --parallel
   popd
 
-  log_group "Installing ${product_name}..."
-  log_info "Installing to: ${project_root}/release/${config}"
-  cmake --install "${project_root}/build_macos" --config ${config} --prefix "${project_root}/release/${config}" --verbose
+  mkdir -p "${project_root}/release/${config}"
+  
+  log_info "Running installation from build directory..."
+  pushd build_macos
+  cmake --install . --config ${config} --prefix "${project_root}/release/${config}" --verbose
+  popd
   
   log_info "Verifying release directory structure after install:"
   if [[ -d "${project_root}/release" ]] {
