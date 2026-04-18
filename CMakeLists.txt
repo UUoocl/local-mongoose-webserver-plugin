@@ -175,6 +175,6 @@ install(
 if(APPLE)
   install(
     TARGETS ${CMAKE_PROJECT_NAME}
-    BUNDLE DESTINATION "package/Library/Application Support/obs-studio/plugins"
+    LIBRARY DESTINATION "package/Library/Application Support/obs-studio/plugins"
   )
 endif()
