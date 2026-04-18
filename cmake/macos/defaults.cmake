@@ -16,6 +16,13 @@ include(xcode)
 
 include(buildspec)
 
+if(APPLE)
+  # Pre-emptively set linker language for OBS internal targets
+  # This prevents "CMake cannot determine linker language" errors
+  set(CMAKE_LANG_NONE_INIT CXX)
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_FILE}")
+endif()
+
 # Use Applications directory as default install destination
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   set(

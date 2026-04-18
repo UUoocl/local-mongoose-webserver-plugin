@@ -57,6 +57,11 @@ if(APPLE)
   # (Fixes "CMake cannot determine the linker language for the libobs-metal target")
   set_property(TARGET OBS::libobs PROPERTY LINKER_LANGUAGE CXX)
   
+  # Fix for libobs-metal target specifically
+  if(TARGET libobs-metal)
+    set_property(TARGET libobs-metal PROPERTY LINKER_LANGUAGE CXX)
+  endif()
+  
   if(TARGET OBS::obs-frontend-api)
     set_property(TARGET OBS::obs-frontend-api PROPERTY LINKER_LANGUAGE CXX)
   endif()
