@@ -5,7 +5,7 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/common/bootstrap.cmake" NO_POLICY_SCO
 # ---------------------------------------------------------------------------
 # Project metadata
 # ---------------------------------------------------------------------------
-project(${_name} VERSION ${_version} LANGUAGES C CXX)
+project(${_name} VERSION ${_version} LANGUAGES CXX C)
 
 # ---------------------------------------------------------------------------
 # Options
@@ -51,6 +51,17 @@ configure_file(
 add_library(${CMAKE_PROJECT_NAME} MODULE)
 
 find_package(libobs REQUIRED)
+
+if(APPLE)
+  # Explicitly set linker language for OBS targets to prevent CMake errors
+  # (Fixes "CMake cannot determine the linker language for the libobs-metal target")
+  set_property(TARGET OBS::libobs PROPERTY LINKER_LANGUAGE CXX)
+  
+  if(TARGET OBS::obs-frontend-api)
+    set_property(TARGET OBS::obs-frontend-api PROPERTY LINKER_LANGUAGE CXX)
+  endif()
+endif()
+
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE OBS::libobs)
 
 if(APPLE)
