@@ -28,6 +28,8 @@ if(APPLE)
   # Fix for AGL framework being missing in modern macOS SDKs
   set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "" FORCE)
   set(AGL_LIBRARY "-framework OpenGL" CACHE STRING "" FORCE)
+  # Set linker language early to prevent CMake errors during find_package phase
+  set(CMAKE_LINKER_LANGUAGE CXX)
 endif()
 
 # ---------------------------------------------------------------------------
