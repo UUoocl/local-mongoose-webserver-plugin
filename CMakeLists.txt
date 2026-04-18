@@ -153,6 +153,8 @@ set(LOCAL_WEBSERVER_SRC
 
 if(APPLE)
   set_source_files_properties("${LWS_THIRD_DIR}/mongoose.c" PROPERTIES COMPILE_FLAGS "-w")
+elseif(MSVC)
+  set_source_files_properties("${LWS_THIRD_DIR}/mongoose.c" PROPERTIES COMPILE_FLAGS "/W0")
 endif()
 
 
