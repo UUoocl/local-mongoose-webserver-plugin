@@ -10,7 +10,7 @@ Perfect for HTML/CSS/JS overlays, dashboards, widgets, and any Browser Source th
 - 🖥️ **Built‑in local HTTP server** running inside OBS
 - 📁 **Serves any folder** as a document root
 - 🌐 **Browser Source friendly** (HTML/CSS/JS/images/fonts/JSON)
-- 🧭 **Local-only by default** (127.0.0.1)
+- 🧭 **Strictly Local-only** (locked to 127.0.0.1 for security)
 - ⚙️ **Configurable port** (auto‑rebinding if busy)
 - 🔄 **One‑click Browser Source refresh** (cache bust)
 - 🎯 **Create/Update Browser Source in current scene**
@@ -42,7 +42,14 @@ The installer places:
    ```
    into your OBS installation directory.
 
-### macOS / Linux
+### Manual Install (macOS)
+
+1. Download the `.plugin` bundle.
+2. Copy `local-webserver.plugin` to:
+   `~/Library/Application Support/obs-studio/plugins/`
+3. Restart OBS.
+
+### Linux
 
 Not packaged yet.  
 If you want to help test builds, open an issue or ping me on Discord.
@@ -110,17 +117,28 @@ If the chosen port is unavailable, the server automatically binds to a free port
 - Qt 6
 - CMake 3.28+
 
-### Build (Windows example)
+### Build (Windows)
 
 ```bash
 cmake --preset windows-x64
 cmake --build --preset windows-x64 --config RelWithDebInfo
 ```
 
+### Build (macOS Apple Silicon)
+
+```bash
+# Configuration targeting arm64
+cmake --preset macos
+# Build and automatically ad-hoc sign
+cmake --build --preset macos --config RelWithDebInfo
+# Deploy to local OBS
+./deploy_macos.sh
+```
+
 Artifacts will be staged under:
 
 ```
-release/RelWithDebInfo/local-webserver/
+build_macos/RelWithDebInfo/ local-webserver.plugin/
 ```
 
 ---
