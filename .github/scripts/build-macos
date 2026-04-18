@@ -114,36 +114,8 @@ build() {
   cmake -S ${project_root} ${cmake_args}
 
   log_group "Building ${product_name}..."
-  run_xcodebuild() {
-    if (( debug )) {
-      xcodebuild ${@}
-    } else {
-      if [[ ${GITHUB_EVENT_NAME} == push ]] {
-        xcodebuild ${@} 2>&1 | xcbeautify --renderer terminal
-      } else {
-        xcodebuild ${@} 2>&1 | xcbeautify --renderer github-actions
-      }
-    }
-  }
-
-  local project_path="${project_root}/${product_name}.xcodeproj"
-  if [[ ! -d ${project_path} ]] project_path="${project_root}/build_macos/${product_name}.xcodeproj"
-
-  local -a build_args=(
-    ONLY_ACTIVE_ARCH=NO
-    -arch arm64
-    -arch x86_64
-    -project ${project_path}
-    -target ${product_name}
-    -destination "generic/platform=macOS,name=Any Mac"
-    -configuration ${config}
-    -parallelizeTargets
-    -hideShellScriptEnvironment
-    build
-  )
-
   pushd build_macos
-  run_xcodebuild ${build_args}
+  cmake --build . --config ${config} --parallel
   popd
 
   log_group "Installing ${product_name}..."
