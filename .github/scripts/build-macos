@@ -126,8 +126,8 @@ build() {
     }
   }
 
-  local project_path="${product_name}.xcodeproj"
-  if [[ ! -d ${project_path} ]] project_path="../${product_name}.xcodeproj"
+  local project_path="${project_root}/${product_name}.xcodeproj"
+  if [[ ! -d ${project_path} ]] project_path="${project_root}/build_macos/${product_name}.xcodeproj"
 
   local -a build_args=(
     ONLY_ACTIVE_ARCH=NO
