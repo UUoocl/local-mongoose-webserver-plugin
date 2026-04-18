@@ -1,12 +1,12 @@
 {
     "dependencies": {
         "obs-studio": {
-            "version": "31.1.0",
+            "version": "32.1.1",
             "baseUrl": "https://github.com/obsproject/obs-studio/archive/refs/tags",
             "label": "OBS sources",
             "hashes": {
-                "macos": "ba903f3848cfabd9ea1205aea14b69e83a2eb43ad6f3f7cc80a6a900bce0e56e",
-                "windows-x64": "ca4b7513bb0b34c708f1cc89016f6ed879b710c912a93387e9f83445c1fc68bb"
+                "macos": "800a394671770794d8a453d3939b38605971b08e89634160f28c74ca62f62492",
+                "windows-x64": "800a394671770794d8a453d3939b38605971b08e89634160f28c74ca62f62492"
             }
         },
         "prebuilt": {
@@ -33,11 +33,11 @@
     },
     "platformConfig": {
         "macos": {
-            "bundleId": "com.example.local-webserver"
+            "bundleId": "com.example.local-mongoose-webserver"
         }
     },
-    "name": "local-webserver",
-    "displayName": "Plugin Template for OBS",
+    "name": "local-mongoose-webserver",
+    "displayName": "Local Mongoose Webserver for OBS",
     "version": "1.0.0",
     "author": "Your Name Here",
     "website": "https://example.com",

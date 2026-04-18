@@ -86,10 +86,8 @@ void obs_module_unload(void)
 	LOGI("Unloading...");
 
 #ifdef ENABLE_FRONTEND_API
-	if (g_menu_action) {
-		delete g_menu_action;
-		g_menu_action = nullptr;
-	}
+	// OBS manages the lifecycle of the menu action, so we don't delete it manually.
+	g_menu_action = nullptr;
 #endif
 
 	lws_server_stop();

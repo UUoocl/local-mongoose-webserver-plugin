@@ -66,6 +66,9 @@ if(APPLE)
     endforeach()
 
     # Link required macOS frameworks
+    # Workaround for missing AGL framework: use local mock symlinked to OpenGL
+    target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE "-F${CMAKE_CURRENT_SOURCE_DIR}/local_frameworks")
+    
     find_library(CARBON_FRAMEWORK Carbon REQUIRED)
     find_library(APP_SERVICES_FRAMEWORK ApplicationServices REQUIRED)
     find_library(COCOA_FRAMEWORK Cocoa REQUIRED)
@@ -78,9 +81,18 @@ if(APPLE)
     # Aggressively remove AGL from the target's link list
     get_target_property(TARGET_LIBS ${CMAKE_PROJECT_NAME} LINK_LIBRARIES)
     if(TARGET_LIBS)
-        list(REMOVE_ITEM TARGET_LIBS "-framework AGL" "AGL")
+        list(REMOVE_ITEM TARGET_LIBS "-framework AGL" "AGL" "/System/Library/Frameworks/AGL.framework")
         set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES LINK_LIBRARIES "${TARGET_LIBS}")
     endif()
+
+    # Enable dead stripping of dylibs to remove unused phantom dependencies like AGL
+    add_link_options("-Wl,-dead_strip_dylibs")
+
+    # Post-build: Redirect the phantom AGL dependency to libresolv to avoid duplicate entry error with OpenGL
+    add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
+        COMMAND install_name_tool -change @rpath/AGL.framework/AGL /usr/lib/libresolv.9.dylib "$<TARGET_FILE:${CMAKE_PROJECT_NAME}>" || true
+        COMMENT "Redirecting phantom AGL dependency to libresolv"
+    )
 endif()
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE

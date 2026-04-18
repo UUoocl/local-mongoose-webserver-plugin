@@ -20,7 +20,7 @@ Unicode true
 ; ------------------------------------------------------------------------
 
 !ifndef PRODUCT_NAME
-  !define PRODUCT_NAME "local-webserver"
+  !define PRODUCT_NAME "local-mongoose-webserver"
 !endif
 
 !ifndef PRODUCT_VERSION
@@ -40,20 +40,20 @@ Unicode true
 !endif
 
 !ifndef OUTPUT_EXE
-  !define OUTPUT_EXE "local-webserver-setup.exe"
+  !define OUTPUT_EXE "local-mongoose-webserver-setup.exe"
 !endif
 
 ; Where CMake installed the plugin:
-;   ${PROJECT_ROOT}\release\<CONFIGURATION>\local-webserver\...
+;   ${PROJECT_ROOT}\release\<CONFIGURATION>\local-mongoose-webserver\...
 !define BUILD_ROOT "${PROJECT_ROOT}\release\${CONFIGURATION}\${PRODUCT_NAME}"
 
 ; Installer icon
 !ifndef INSTALLER_ICON
-  !define INSTALLER_ICON "${PROJECT_ROOT}\installer\resources\local-webserver.ico"
+  !define INSTALLER_ICON "${PROJECT_ROOT}\installer\resources\local-mongoose-webserver.ico"
 !endif
 
 ; Optional custom welcome/finish bitmap
-!define MUI_WELCOMEFINISHPAGE_BITMAP "${PROJECT_ROOT}\installer\resources\local-webserver-welcome.bmp"
+!define MUI_WELCOMEFINISHPAGE_BITMAP "${PROJECT_ROOT}\installer\resources\local-mongoose-webserver-welcome.bmp"
 
 ; ------------------------------------------------------------------------
 ; Basic installer metadata
@@ -75,10 +75,10 @@ Section "OBS Plugin (DLL + Locales)" SEC_CORE
 
   ; --- Plugin DLL ---
   SetOutPath "$OBSDir\obs-plugins\64bit"
-  File "/oname=local-webserver.dll" "${BUILD_ROOT}\bin\64bit\local-webserver.dll"
+  File "/oname=local-mongoose-webserver.dll" "${BUILD_ROOT}\bin\64bit\local-mongoose-webserver.dll"
 
   ; --- Locale files ---
-  SetOutPath "$OBSDir\data\obs-plugins\local-webserver\locale"
+  SetOutPath "$OBSDir\data\obs-plugins\local-mongoose-webserver\locale"
   File /nonfatal /r "${BUILD_ROOT}\data\locale\*.*"
 SectionEnd
 

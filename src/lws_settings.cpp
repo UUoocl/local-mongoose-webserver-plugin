@@ -7,7 +7,7 @@
 #include <QSettings>
 
 static inline QString org_name() { return QStringLiteral("MMLTech"); }
-static inline QString app_name() { return QStringLiteral("local-webserver"); }
+static inline QString app_name() { return QStringLiteral("local-mongoose-webserver"); }
 static inline QString key_port() { return QStringLiteral("server/port"); }
 
 LwsSettings lws_settings_load()

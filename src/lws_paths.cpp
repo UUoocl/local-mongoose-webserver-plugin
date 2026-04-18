@@ -8,16 +8,16 @@
 #include <QSettings>
 
 static inline QString org_name() { return QStringLiteral("MMLTech"); }
-static inline QString app_name() { return QStringLiteral("local-webserver"); }
+static inline QString app_name() { return QStringLiteral("local-mongoose-webserver"); }
 static inline QString key_data() { return QStringLiteral("paths/data_root"); }
 
 QString lws_default_data_root()
 {
     QString base = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     if (base.isEmpty())
-        base = QDir::home().filePath(QStringLiteral(".local-webserver"));
+        base = QDir::home().filePath(QStringLiteral(".local-mongoose-webserver"));
     else
-        base = QDir(base).filePath(QStringLiteral("local-webserver"));
+        base = QDir(base).filePath(QStringLiteral("local-mongoose-webserver"));
 
     QDir d(base);
     if (!d.exists())

@@ -24,28 +24,28 @@ Perfect for HTML/CSS/JS overlays, dashboards, widgets, and any Browser Source th
 ### Windows (Installer)
 
 1. Download the latest **Windows installer** from the Releases page:
-   - **Releases → Assets → local-webserver-setup.exe**
+   - **Releases → Assets → local-mongoose-webserver-setup.exe**
 2. Run the installer and choose your OBS Studio folder.
 
 The installer places:
 
-- `local-webserver.dll` → `OBS\obs-plugins\64bit\`
-- locales → `OBS\data\obs-plugins\local-webserver\locale\`
+- `local-mongoose-webserver.dll` → `OBS\obs-plugins\64bit\`
+- locales → `OBS\data\obs-plugins\local-mongoose-webserver\locale\`
 
 ### Manual Install (Windows)
 
 1. Download the `.zip` from Releases.
 2. Copy:
    ```
-   obs-plugins/64bit/local-webserver.dll
-   data/obs-plugins/local-webserver/locale/
+   obs-plugins/64bit/local-mongoose-webserver.dll
+   data/obs-plugins/local-mongoose-webserver/locale/
    ```
    into your OBS installation directory.
 
 ### Manual Install (macOS)
 
 1. Download the `.plugin` bundle.
-2. Copy `local-webserver.plugin` to:
+2. Copy `local-mongoose-webserver.plugin` to:
    `~/Library/Application Support/obs-studio/plugins/`
 3. Restart OBS.
 
@@ -138,7 +138,7 @@ cmake --build --preset macos --config RelWithDebInfo
 Artifacts will be staged under:
 
 ```
-build_macos/RelWithDebInfo/ local-webserver.plugin/
+build_macos/RelWithDebInfo/ local-mongoose-webserver.plugin/
 ```
 
 ---
