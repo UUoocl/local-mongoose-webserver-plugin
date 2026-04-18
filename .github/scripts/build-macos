@@ -119,7 +119,11 @@ build() {
   popd
 
   log_group "Installing ${product_name}..."
-  cmake --install build_macos --config ${config} --prefix "${project_root}/release/${config}"
+  log_info "Installing to: ${project_root}/release/${config}"
+  cmake --install "${project_root}/build_macos" --config ${config} --prefix "${project_root}/release/${config}"
+  
+  log_info "Verifying release directory structure:"
+  ls -R "${project_root}/release" || log_error "Release directory not found after install!"
 
   popd
   log_group
