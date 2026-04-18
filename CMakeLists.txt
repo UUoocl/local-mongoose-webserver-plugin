@@ -132,7 +132,13 @@ set(LOCAL_WEBSERVER_SRC
   "${LWS_SRC_DIR}/lws_settings.cpp"
   "${LWS_SRC_DIR}/lws_server.cpp"
   "${LWS_SRC_DIR}/lws_obs_helpers.cpp"
+  "${LWS_THIRD_DIR}/mongoose.c"
 )
+
+if(APPLE)
+  set_source_files_properties("${LWS_THIRD_DIR}/mongoose.c" PROPERTIES COMPILE_FLAGS "-w")
+endif()
+
 
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${LOCAL_WEBSERVER_SRC})
 
