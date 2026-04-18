@@ -94,12 +94,9 @@ if(APPLE)
         COMMENT "Redirecting phantom AGL dependency to libresolv"
     )
 
-    # Explicitly set linker language for OBS targets to prevent CMake errors
-    foreach(target_name libobs-metal libobs-metal-objc libobs-metal-objcxx OBS::libobs OBS::libobs-metal OBS::obs-frontend-api)
-        if(TARGET ${target_name})
-            set_target_properties(${target_name} PROPERTIES LINKER_LANGUAGE CXX)
-        endif()
-    endforeach()
+    # REMOVE the problematic linker language setting for external targets
+    # Only set language for your own module, not for imported OBS targets
+    set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 endif()
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
