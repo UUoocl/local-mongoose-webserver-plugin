@@ -21,265 +21,346 @@
 #include <QLineEdit>
 #include <QGroupBox>
 
-static void styleDot(QLabel *dot, bool ok)
+enum class ServerStatus { Stopped, Running, Failed };
+
+static void styleDot(QLabel *dot, ServerStatus status)
 {
 	dot->setFixedSize(12, 12);
+	QString color;
+	if (status == ServerStatus::Running)
+		color = "#39d353"; // Green
+	else if (status == ServerStatus::Failed)
+		color = "#ff6b6b"; // Red
+	else
+		color = "#8b949e"; // Grey
+
 	dot->setStyleSheet(QString("border-radius:6px;"
 				   "background-color:%1;"
 				   "border:1px solid rgba(0,0,0,0.25);")
-				   .arg(ok ? "#39d353" : "#ff6b6b"));
+				   .arg(color));
 }
 
-static constexpr const char *kLwsBrowserSourceName = "Local Webserver";
+static constexpr const char *kLwsBrowserSourceName = "Media Warp - Manager";
 
 LwsDialog::LwsDialog(QWidget *parent) : QDialog(parent)
 {
 	setObjectName(QStringLiteral("LwsDialog"));
-	setWindowTitle(QStringLiteral("Local Webserver"));
+	setWindowTitle(QStringLiteral("Local Webserver Settings"));
 	setModal(false);
 	setSizeGripEnabled(false);
-	setMinimumWidth(520);
+	setMinimumWidth(550);
 
 	settings_ = lws_settings_load();
 
 	auto *root = new QVBoxLayout(this);
 	root->setContentsMargins(14, 14, 14, 14);
-	root->setSpacing(10);
-
-	auto *hint = new QLabel(QStringLiteral(
-		"Start a local HTTP server that serves files from a folder.\n"
-		"Then create a Browser Source in your current scene pointing to it."),
-		this);
-	hint->setWordWrap(true);
-	root->addWidget(hint);
+	root->setSpacing(12);
 
 	// -----------------------------------------------------------------
-	// Server status group
+	// HTTP Server Card
 	// -----------------------------------------------------------------
-	auto *gbServer = new QGroupBox(QStringLiteral("Server status"), this);
-	auto *serverLayout = new QVBoxLayout(gbServer);
+	auto *gbHttp = new QGroupBox(QStringLiteral("HTTP Server (File Server)"), this);
+	auto *httpLayout = new QVBoxLayout(gbHttp);
 
-	auto *statusRow = new QWidget(gbServer);
-	auto *statusLay = new QHBoxLayout(statusRow);
-	statusLay->setContentsMargins(0, 0, 0, 0);
+	auto *httpStatusRow = new QHBoxLayout();
+	httpStatusDot_ = new QLabel(gbHttp);
+	httpStatusText_ = new QLabel(gbHttp);
+	httpStatusRow->addWidget(httpStatusDot_);
+	httpStatusRow->addWidget(httpStatusText_);
+	httpStatusRow->addStretch(1);
+	httpLayout->addLayout(httpStatusRow);
 
-	statusDot_ = new QLabel(statusRow);
-	statusText_ = new QLabel(QStringLiteral("Stopped"), statusRow);
+	auto *httpCtrlRow = new QHBoxLayout();
+	httpPortSpin_ = new QSpinBox(gbHttp);
+	httpPortSpin_->setRange(1024, 65535);
+	httpPortSpin_->setValue(settings_.http_port);
+	httpPortSpin_->setFixedWidth(90);
+	
+	httpStartBtn_ = new QPushButton(QStringLiteral("Start"), gbHttp);
+	httpStopBtn_ = new QPushButton(QStringLiteral("Stop"), gbHttp);
+	httpStartBtn_->setCursor(Qt::PointingHandCursor);
+	httpStopBtn_->setCursor(Qt::PointingHandCursor);
 
-	statusLay->addWidget(statusDot_);
-	statusLay->addWidget(statusText_);
-	statusLay->addStretch(1);
-	statusRow->setLayout(statusLay);
+	httpCtrlRow->addWidget(new QLabel(QStringLiteral("Port:"), gbHttp));
+	httpCtrlRow->addWidget(httpPortSpin_);
+	httpCtrlRow->addStretch(1);
+	httpCtrlRow->addWidget(httpStartBtn_);
+	httpCtrlRow->addWidget(httpStopBtn_);
+	httpLayout->addLayout(httpCtrlRow);
 
-	serverLayout->addWidget(statusRow);
-	gbServer->setLayout(serverLayout);
-	root->addWidget(gbServer);
+	root->addWidget(gbHttp);
 
 	// -----------------------------------------------------------------
-	// Doc root group
+	// WebSocket Server Card
 	// -----------------------------------------------------------------
-	auto *gbDoc = new QGroupBox(QStringLiteral("Document root"), this);
+	auto *gbWs = new QGroupBox(QStringLiteral("WebSocket Server (Bridge)"), this);
+	auto *wsLayout = new QVBoxLayout(gbWs);
+
+	auto *wsStatusRow = new QHBoxLayout();
+	wsStatusDot_ = new QLabel(gbWs);
+	wsStatusText_ = new QLabel(gbWs);
+	wsStatusRow->addWidget(wsStatusDot_);
+	wsStatusRow->addWidget(wsStatusText_);
+	wsStatusRow->addStretch(1);
+	wsLayout->addLayout(wsStatusRow);
+
+	auto *wsCtrlRow = new QHBoxLayout();
+	wsPortSpin_ = new QSpinBox(gbWs);
+	wsPortSpin_->setRange(1024, 65535);
+	wsPortSpin_->setValue(settings_.ws_port);
+	wsPortSpin_->setFixedWidth(90);
+
+	wsStartBtn_ = new QPushButton(QStringLiteral("Start"), gbWs);
+	wsStopBtn_ = new QPushButton(QStringLiteral("Stop"), gbWs);
+	wsStartBtn_->setCursor(Qt::PointingHandCursor);
+	wsStopBtn_->setCursor(Qt::PointingHandCursor);
+
+	wsCtrlRow->addWidget(new QLabel(QStringLiteral("Port:"), gbWs));
+	wsCtrlRow->addWidget(wsPortSpin_);
+	wsCtrlRow->addStretch(1);
+	wsCtrlRow->addWidget(wsStartBtn_);
+	wsCtrlRow->addWidget(wsStopBtn_);
+	wsLayout->addLayout(wsCtrlRow);
+
+	root->addWidget(gbWs);
+	
+	// -----------------------------------------------------------------
+	// OBS WebSocket Connect info
+	// -----------------------------------------------------------------
+	auto *gbObs = new QGroupBox(QStringLiteral("OBS Websocket Connect info"), this);
+	auto *obsLayout = new QVBoxLayout(gbObs);
+	
+	auto *obsPortRow = new QHBoxLayout();
+	obsPortSpin_ = new QSpinBox(gbObs);
+	obsPortSpin_->setRange(1, 65535);
+	obsPortSpin_->setValue(settings_.obs_port);
+	obsPortSpin_->setFixedWidth(90);
+	obsPortRow->addWidget(new QLabel(QStringLiteral("OBS Port:"), gbObs));
+	obsPortRow->addWidget(obsPortSpin_);
+	obsPortRow->addStretch(1);
+	obsLayout->addLayout(obsPortRow);
+	
+	auto *obsPassRow = new QHBoxLayout();
+	obsPasswordEdit_ = new QLineEdit(gbObs);
+	obsPasswordEdit_->setEchoMode(QLineEdit::Password);
+	obsPasswordEdit_->setText(settings_.obs_password);
+	obsPassRow->addWidget(new QLabel(QStringLiteral("Password:"), gbObs));
+	obsPassRow->addWidget(obsPasswordEdit_);
+	obsLayout->addLayout(obsPassRow);
+	
+	root->addWidget(gbObs);
+
+	// -----------------------------------------------------------------
+	// Document Root
+	// -----------------------------------------------------------------
+	auto *gbDoc = new QGroupBox(QStringLiteral("Document Root"), this);
 	auto *docLayout = new QVBoxLayout(gbDoc);
-
-	auto *docHint = new QLabel(QStringLiteral(
-		"Files from this folder will be available at the server root (/)."),
-		gbDoc);
-	docHint->setWordWrap(true);
-	docLayout->addWidget(docHint);
 
 	docRootEdit_ = new QLineEdit(gbDoc);
 	docRootEdit_->setReadOnly(true);
 	docRootEdit_->setText(settings_.doc_root);
 	docLayout->addWidget(docRootEdit_);
 
-	auto *docButtonsRow = new QWidget(gbDoc);
-	auto *docButtonsLay = new QHBoxLayout(docButtonsRow);
-	docButtonsLay->setContentsMargins(0, 0, 0, 0);
-
-	browseBtn_ = new QPushButton(QStringLiteral("Browse…"), docButtonsRow);
-	openBtn_   = new QPushButton(QStringLiteral("Open folder"), docButtonsRow);
-
+	auto *docBtns = new QHBoxLayout();
+	browseBtn_ = new QPushButton(QStringLiteral("Browse…"), gbDoc);
+	openBtn_ = new QPushButton(QStringLiteral("Open Folder"), gbDoc);
 	browseBtn_->setCursor(Qt::PointingHandCursor);
 	openBtn_->setCursor(Qt::PointingHandCursor);
+	docBtns->addStretch(1);
+	docBtns->addWidget(browseBtn_);
+	docBtns->addWidget(openBtn_);
+	docLayout->addLayout(docBtns);
 
-	docButtonsLay->addStretch(1);
-	docButtonsLay->addWidget(browseBtn_);
-	docButtonsLay->addWidget(openBtn_);
-	docButtonsRow->setLayout(docButtonsLay);
-
-	docLayout->addWidget(docButtonsRow);
-	gbDoc->setLayout(docLayout);
 	root->addWidget(gbDoc);
 
 	// -----------------------------------------------------------------
-	// Port group
+	// Actions
 	// -----------------------------------------------------------------
-	auto *gbPort = new QGroupBox(QStringLiteral("Port"), this);
-	auto *portLayout = new QHBoxLayout(gbPort);
-
-	portSpin_ = new QSpinBox(gbPort);
-	portSpin_->setRange(1024, 65535);
-	portSpin_->setValue(settings_.port);
-	portSpin_->setFixedWidth(110);
-
-	restartBtn_ = new QPushButton(QStringLiteral("Start / Restart"), gbPort);
-	stopBtn_    = new QPushButton(QStringLiteral("Stop"), gbPort);
-
-	restartBtn_->setCursor(Qt::PointingHandCursor);
-	stopBtn_->setCursor(Qt::PointingHandCursor);
-
-	portLayout->addWidget(new QLabel(QStringLiteral("Port:"), gbPort));
-	portLayout->addWidget(portSpin_);
-	portLayout->addStretch(1);
-	portLayout->addWidget(restartBtn_);
-	portLayout->addWidget(stopBtn_);
-
-	gbPort->setLayout(portLayout);
-	root->addWidget(gbPort);
-
-	// -----------------------------------------------------------------
-	// Browser source buttons
-	// -----------------------------------------------------------------
-	auto *browserRow = new QHBoxLayout();
-	browserRow->setSpacing(8);
-	browserRow->setContentsMargins(0, 0, 0, 0);
-
-	createBrowserBtn_ = new QPushButton(QStringLiteral("Create Browser Source in current scene"), this);
+	auto *actionRow = new QHBoxLayout();
+	createBrowserBtn_ = new QPushButton(QStringLiteral("Create Browser Source"), this);
+	refreshBrowserBtn_ = new QPushButton(QStringLiteral("Refresh Source"), this);
 	createBrowserBtn_->setCursor(Qt::PointingHandCursor);
-
-	refreshBrowserBtn_ = new QPushButton(QStringLiteral("Refresh Browser Source"), this);
 	refreshBrowserBtn_->setCursor(Qt::PointingHandCursor);
-	refreshBrowserBtn_->setToolTip(
-		QStringLiteral("Refresh the '%1' browser source (cache bust).").arg(kLwsBrowserSourceName));
-
-	browserRow->addWidget(createBrowserBtn_, 1);
-	browserRow->addWidget(refreshBrowserBtn_, 0);
-
-	root->addLayout(browserRow);
+	actionRow->addWidget(createBrowserBtn_);
+	actionRow->addWidget(refreshBrowserBtn_);
+	root->addLayout(actionRow);
 
 	// -----------------------------------------------------------------
-	// Close
+	// Footer
 	// -----------------------------------------------------------------
-	auto *closeRow = new QHBoxLayout();
-	closeRow->addStretch(1);
+	auto *footer = new QHBoxLayout();
+	footer->addStretch(1);
 	auto *closeBtn = new QPushButton(QStringLiteral("Close"), this);
-	closeBtn->setCursor(Qt::PointingHandCursor);
 	closeBtn->setDefault(true);
-	closeRow->addWidget(closeBtn);
-	root->addLayout(closeRow);
-
-	setLayout(root);
+	footer->addWidget(closeBtn);
+	root->addLayout(footer);
 
 	// -----------------------------------------------------------------
-	// Poll + signals
+	// Signals
 	// -----------------------------------------------------------------
 	statusTimer_ = new QTimer(this);
 	connect(statusTimer_, &QTimer::timeout, this, &LwsDialog::onPollHealth);
-	statusTimer_->start(1500);
+	statusTimer_->start(1000);
+
+	connect(httpStartBtn_, &QPushButton::clicked, this, &LwsDialog::onStartHttp);
+	connect(httpStopBtn_, &QPushButton::clicked, this, &LwsDialog::onStopHttp);
+	connect(wsStartBtn_, &QPushButton::clicked, this, &LwsDialog::onStartWs);
+	connect(wsStopBtn_, &QPushButton::clicked, this, &LwsDialog::onStopWs);
 
 	connect(browseBtn_, &QPushButton::clicked, this, &LwsDialog::onBrowseDocRoot);
-	connect(openBtn_,   &QPushButton::clicked, this, &LwsDialog::onOpenDocRoot);
-	connect(restartBtn_, &QPushButton::clicked, this, &LwsDialog::onRestartServer);
-	connect(stopBtn_, &QPushButton::clicked, this, &LwsDialog::onStopServer);
+	connect(openBtn_, &QPushButton::clicked, this, &LwsDialog::onOpenDocRoot);
 
 	connect(createBrowserBtn_, &QPushButton::clicked, this, &LwsDialog::onCreateBrowserSource);
 	connect(refreshBrowserBtn_, &QPushButton::clicked, this, &LwsDialog::onRefreshBrowserSource);
+	
+	// Save when values change
+	connect(obsPortSpin_, QOverload<int>::of(&QSpinBox::valueChanged), [this](int val) {
+		settings_.obs_port = val;
+		lws_settings_save(settings_);
+	});
+	connect(obsPasswordEdit_, &QLineEdit::textChanged, [this](const QString &text) {
+		settings_.obs_password = text;
+		lws_settings_save(settings_);
+	});
 
-	connect(closeBtn, &QPushButton::clicked, this, &LwsDialog::accept);
+	connect(closeBtn, &QPushButton::clicked, this, &QDialog::accept);
 
 	onPollHealth();
 }
 
 LwsDialog::~LwsDialog() = default;
 
-void LwsDialog::setStatusUi(bool ok, int port)
-{
-	styleDot(statusDot_, ok);
-	statusText_->setText(ok
-		? QStringLiteral("Running on :%1").arg(port)
-		: QStringLiteral("Stopped"));
-}
-
 void LwsDialog::onPollHealth()
 {
-	setStatusUi(lws_server_is_running(), lws_server_port());
+	updateHttpUi();
+	updateWsUi();
+}
+
+void LwsDialog::updateHttpUi()
+{
+	bool running = lws_http_server_is_running();
+	bool failed = lws_http_server_failed();
+	int port = lws_http_server_port();
+
+	ServerStatus status = ServerStatus::Stopped;
+	QString text = QStringLiteral("Stopped");
+
+	if (running) {
+		status = ServerStatus::Running;
+		text = QStringLiteral("Running on :%1").arg(port);
+	} else if (failed) {
+		status = ServerStatus::Failed;
+		text = QStringLiteral("Port not available");
+	}
+
+	styleDot(httpStatusDot_, status);
+	httpStatusText_->setText(text);
+	httpStartBtn_->setEnabled(!running);
+	httpStopBtn_->setEnabled(running);
+}
+
+void LwsDialog::updateWsUi()
+{
+	bool running = lws_ws_server_is_running();
+	bool failed = lws_ws_server_failed();
+	int port = lws_ws_server_port();
+
+	ServerStatus status = ServerStatus::Stopped;
+	QString text = QStringLiteral("Stopped");
+
+	if (running) {
+		status = ServerStatus::Running;
+		text = QStringLiteral("Running on :%1").arg(port);
+	} else if (failed) {
+		status = ServerStatus::Failed;
+		text = QStringLiteral("Port not available");
+	}
+
+	styleDot(wsStatusDot_, status);
+	wsStatusText_->setText(text);
+	wsStartBtn_->setEnabled(!running);
+	wsStopBtn_->setEnabled(running);
+}
+
+void LwsDialog::onStartHttp()
+{
+	settings_.http_port = httpPortSpin_->value();
+	settings_.http_enabled = true;
+	lws_settings_save(settings_);
+	lws_http_server_start(settings_.doc_root, settings_.http_port);
+	onPollHealth();
+}
+
+void LwsDialog::onStopHttp()
+{
+	settings_.http_enabled = false;
+	lws_settings_save(settings_);
+	lws_http_server_stop();
+	onPollHealth();
+}
+
+void LwsDialog::onStartWs()
+{
+	settings_.ws_port = wsPortSpin_->value();
+	settings_.ws_enabled = true;
+	lws_settings_save(settings_);
+	lws_ws_server_start(settings_.ws_port);
+	onPollHealth();
+}
+
+void LwsDialog::onStopWs()
+{
+	settings_.ws_enabled = false;
+	lws_settings_save(settings_);
+	lws_ws_server_stop();
+	onPollHealth();
 }
 
 void LwsDialog::onBrowseDocRoot()
 {
-	QString current = settings_.doc_root;
-	if (current.isEmpty())
-		current = lws_default_data_root();
-
-	QString picked = QFileDialog::getExistingDirectory(
-		this, tr("Select document root"), current);
-
-	if (picked.isEmpty())
-		return;
-
-	settings_.doc_root = picked;
-	docRootEdit_->setText(picked);
-	lws_settings_save(settings_);
+	QString picked = QFileDialog::getExistingDirectory(this, tr("Select Document Root"), settings_.doc_root);
+	if (!picked.isEmpty()) {
+		settings_.doc_root = picked;
+		docRootEdit_->setText(picked);
+		lws_settings_save(settings_);
+	}
 }
 
 void LwsDialog::onOpenDocRoot()
 {
-	QString root = settings_.doc_root;
-	if (root.isEmpty())
-		root = lws_get_data_root();
-
-	QDesktopServices::openUrl(QUrl::fromLocalFile(root));
-}
-
-void LwsDialog::onRestartServer()
-{
-	settings_.port = portSpin_->value();
-	if (settings_.doc_root.isEmpty())
-		settings_.doc_root = lws_get_data_root();
-
-	lws_settings_save(settings_);
-
-	if (lws_server_is_running())
-		lws_server_stop();
-
-	int bound = lws_server_start(settings_.doc_root, settings_.port);
-	if (!bound)
-		LOGW("Failed to start webserver");
-	else if (bound != settings_.port) {
-		settings_.port = bound;
-		portSpin_->setValue(bound);
-		lws_settings_save(settings_);
-	}
-
-	onPollHealth();
-}
-
-void LwsDialog::onStopServer()
-{
-	lws_server_stop();
-	onPollHealth();
+	QDesktopServices::openUrl(QUrl::fromLocalFile(settings_.doc_root));
 }
 
 void LwsDialog::onCreateBrowserSource()
 {
-	const int port = lws_server_port();
-	if (!lws_server_is_running() || port <= 0) {
-		LOGW("Server not running; start it first.");
-		return;
+	int port = lws_http_server_port();
+	if (port <= 0) port = settings_.http_port;
+	
+	QString baseName = QString::fromUtf8(kLwsBrowserSourceName);
+	QString finalName = baseName;
+	int index = 1;
+
+	// Check if source with this name already exists
+	while (true) {
+		obs_source_t *existing = obs_get_source_by_name(finalName.toUtf8().constData());
+		if (!existing) break;
+		
+		obs_source_release(existing);
+		finalName = QString("%1 %2").arg(baseName).arg(index++);
 	}
 
-	const QString url = QStringLiteral("http://127.0.0.1:%1/").arg(port);
+	QString url = QStringLiteral("http://127.0.0.1:%1/").arg(port);
 	lws_create_or_update_browser_source_in_current_scene(
-		QString::fromUtf8(kLwsBrowserSourceName), url);
-
-	LOGI("Browser source created/updated: %s", url.toUtf8().constData());
+		finalName, 
+		url
+	);
 }
 
 void LwsDialog::onRefreshBrowserSource()
 {
-	const bool ok = lws_refresh_browser_source_by_name(QString::fromUtf8(kLwsBrowserSourceName));
-	if (!ok)
-		LOGW("Refresh failed for Browser Source: %s", kLwsBrowserSourceName);
-	else
-		LOGI("Browser source refreshed: %s", kLwsBrowserSourceName);
+	// 1. Refresh the primary browser source created by the plugin
+	lws_refresh_browser_source_by_name(QStringLiteral("Media Warp - Manager"));
+
+	// 2. Perform bulk refresh for all tagged sources
+	lws_refresh_all_tagged_browser_sources(settings_.http_port, settings_.ws_port);
 }

@@ -18,29 +18,51 @@ private slots:
 	void onPollHealth();
 	void onBrowseDocRoot();
 	void onOpenDocRoot();
-	void onRestartServer();
-	void onStopServer();
+	
+	// HTTP
+	void onStartHttp();
+	void onStopHttp();
+	
+	// WS
+	void onStartWs();
+	void onStopWs();
+
 	void onCreateBrowserSource();
 	void onRefreshBrowserSource();
 
 private:
-	void setStatusUi(bool ok, int port);
+	void updateHttpUi();
+	void updateWsUi();
 
 private:
 	LwsSettings settings_;
 
-	QLabel *statusDot_ = nullptr;
-	QLabel *statusText_ = nullptr;
-	QSpinBox *portSpin_ = nullptr;
-	QLineEdit *docRootEdit_ = nullptr;
+	// HTTP Card
+	QLabel *httpStatusDot_ = nullptr;
+	QLabel *httpStatusText_ = nullptr;
+	QSpinBox *httpPortSpin_ = nullptr;
+	QPushButton *httpStartBtn_ = nullptr;
+	QPushButton *httpStopBtn_ = nullptr;
 
-	QPushButton *restartBtn_ = nullptr;
-	QPushButton *stopBtn_ = nullptr;
+	// WS Card
+	QLabel *wsStatusDot_ = nullptr;
+	QLabel *wsStatusText_ = nullptr;
+	QSpinBox *wsPortSpin_ = nullptr;
+	QPushButton *wsStartBtn_ = nullptr;
+	QPushButton *wsStopBtn_ = nullptr;
+	
+	// OBS Card
+	QSpinBox *obsPortSpin_ = nullptr;
+	QLineEdit *obsPasswordEdit_ = nullptr;
+
+	// Doc Root
+	QLineEdit *docRootEdit_ = nullptr;
 	QPushButton *browseBtn_ = nullptr;
 	QPushButton *openBtn_ = nullptr;
 
+	// Actions
 	QPushButton *createBrowserBtn_ = nullptr;
-	QPushButton *refreshBrowserBtn_ = nullptr; // NEW
+	QPushButton *refreshBrowserBtn_ = nullptr;
 
 	QTimer *statusTimer_ = nullptr;
 };
