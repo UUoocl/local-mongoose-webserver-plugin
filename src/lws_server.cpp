@@ -65,12 +65,22 @@ static void http_fn(struct mg_connection *c, int ev, void *ev_data)
 	if (ev == MG_EV_HTTP_MSG) {
 		struct mg_http_message *hm = (struct mg_http_message *)ev_data;
 		if (mg_match(hm->uri, mg_str("/__lws/health"), NULL)) {
-			mg_http_reply(c, 200, "Content-Type: text/plain\r\n", "ok");
+			mg_http_reply(c, 200, "Content-Type: text/plain\r\nAccess-Control-Allow-Origin: *\r\n", "ok");
 		} else if (mg_match(hm->uri, mg_str("/__lws/ws_port"), NULL)) {
 			int ws_port = lws_ws_server_port();
 			char buf[32];
 			snprintf(buf, sizeof(buf), "%d", ws_port);
-			mg_http_reply(c, 200, "Content-Type: text/plain\r\n", buf);
+			mg_http_reply(c, 200, "Content-Type: text/plain\r\nAccess-Control-Allow-Origin: *\r\n", buf);
+		} else if (mg_match(hm->uri, mg_str("/callback"), NULL)) {
+            // Received a shortcut callback!
+            if (hm->body.len > 0) {
+                std::string body(hm->body.buf, hm->body.len);
+                LOGI("HTTP: Received shortcut callback: %s", body.c_str());
+                
+                // Broadcast to all connected WebSocket clients
+                lws_ws_server_broadcast(body.c_str());
+            }
+            mg_http_reply(c, 200, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "{\"status\":\"ok\"}");
 		} else {
 			struct mg_http_serve_opts opts = {};
 			opts.root_dir = g_doc_root.c_str();
@@ -82,12 +92,43 @@ static void http_fn(struct mg_connection *c, int ev, void *ev_data)
 				return memcmp(s.buf + s.len - ext_len, ext, ext_len) == 0;
 			};
 
-			if (ends_with(hm->uri, ".js") || ends_with(hm->uri, ".json")) {
-				opts.extra_headers = "Cache-Control: no-store, must-revalidate\r\n";
+			std::string headers = "Access-Control-Allow-Origin: *\r\n";
+			if (ends_with(hm->uri, ".js") || ends_with(hm->uri, ".json") || ends_with(hm->uri, ".wasm")) {
+				headers += "Cache-Control: no-store, must-revalidate\r\n";
 			} else {
-				opts.extra_headers = "Cache-Control: no-cache\r\n";
+				headers += "Cache-Control: no-cache\r\n";
 			}
-			mg_http_serve_dir(c, hm, &opts);
+            
+            // Explicitly handle WASM and TASK files to fix MIME type issues
+            std::string uri_str(hm->uri.buf, hm->uri.len);
+            LOGI("HTTP Request: %s", uri_str.c_str());
+
+            bool is_wasm = (uri_str.find(".wasm") != std::string::npos);
+            bool is_task = (uri_str.find(".task") != std::string::npos);
+
+            if (is_wasm || is_task) {
+                std::string full_path = g_doc_root + uri_str;
+                struct mg_str file_data = mg_file_read(&mg_fs_posix, full_path.c_str());
+                if (file_data.buf != NULL) {
+                    const char *mime = is_wasm ? "application/wasm" : "application/octet-stream";
+                    LOGI("Serving binary file with override: %s as %s (%zu bytes)", uri_str.c_str(), mime, file_data.len);
+                    mg_printf(c, "HTTP/1.1 200 OK\r\n"
+                                 "Content-Type: %s\r\n"
+                                 "Content-Length: %zu\r\n"
+                                 "Access-Control-Allow-Origin: *\r\n"
+                                 "Cache-Control: no-cache\r\n"
+                                 "Connection: close\r\n\r\n", mime, file_data.len);
+                    mg_send(c, file_data.buf, file_data.len);
+                    free((void*)file_data.buf);
+                    return; // EXIT EARLY
+                } else {
+                    LOGW("Binary file NOT found at: %s", full_path.c_str());
+                }
+            }
+            
+            opts.extra_headers = headers.c_str();
+            opts.mime_types = "js=text/javascript,wasm=application/wasm,task=application/octet-stream";
+            mg_http_serve_dir(c, hm, &opts);
 		}
 	}
 }
@@ -225,7 +266,7 @@ static void ws_fn(struct mg_connection *c, int ev, void *ev_data)
 			LOGI("WS: Received credential request. Emitting via OBS API...");
 			lws_emit_credentials_to_tagged_sources();
 		} else if (wm->data.len > 0) {
-			// Relay unknown messages to OBS signals
+			// 1. Relay to OBS signals
 			signal_handler_t *sh = obs_get_signal_handler();
 			if (sh) {
 				calldata_t cd = {0};
@@ -233,6 +274,14 @@ static void ws_fn(struct mg_connection *c, int ev, void *ev_data)
 				signal_handler_signal(sh, "media_warp_receive", &cd);
 				calldata_free(&cd);
 			}
+
+            // 2. Broadcast to all OTHER connected clients
+            std::string msg((const char*)wm->data.buf, wm->data.len);
+            for (struct mg_connection *conn = c->mgr->conns; conn != NULL; conn = conn->next) {
+                if (conn->is_websocket && conn != c) {
+                    mg_ws_send(conn, msg.c_str(), msg.length(), WEBSOCKET_OP_TEXT);
+                }
+            }
 		}
 	} else if (ev == MG_EV_WAKEUP) {
 		struct mg_str *s = (struct mg_str *)ev_data;
@@ -243,7 +292,6 @@ static void ws_fn(struct mg_connection *c, int ev, void *ev_data)
 				}
 			}
 		}
-		LOGI("WS: Broadcasted message to all clients: %.*s", (int)s->len, s->buf);
 	}
 }
 
@@ -312,7 +360,6 @@ void lws_ws_server_broadcast(const char *message)
 {
 	if (g_ws_port.load() == 0 || g_ws_listener_id.load() == 0)
 		return;
-	LOGI("WS: Requesting broadcast via listener wakeup: %s", message);
 	mg_wakeup(&g_ws_mgr, g_ws_listener_id.load(), message, strlen(message));
 }
 

@@ -37,8 +37,16 @@ static void on_media_warp_transmit(void *data, calldata_t *cd)
 	const char *addr = obs_data_get_string(packet, "a");
 
 	if (json_str && addr) {
-		LOGI("Bridge: Received transmit signal for [%s]: %s", addr, json_str);
 		lws_ws_server_broadcast_state(addr, json_str);
+	}
+}
+
+static void on_media_warp_receive(void *data, calldata_t *cd)
+{
+	(void)data;
+	const char *json_str = calldata_string(cd, "json_str");
+	if (json_str) {
+		lws_ws_server_broadcast(json_str);
 	}
 }
 
@@ -97,6 +105,7 @@ bool obs_module_load(void)
 	signal_handler_add(sh, "void media_warp_receive(string json_str)");
 	
 	signal_handler_connect(sh, "media_warp_transmit", on_media_warp_transmit, nullptr);
+	signal_handler_connect(sh, "media_warp_receive", on_media_warp_receive, nullptr);
 
 	// Bootstrap Auth for existing sources
 	lws_emit_credentials_to_tagged_sources();
@@ -121,6 +130,7 @@ void obs_module_unload(void)
 
 	signal_handler_t *sh = obs_get_signal_handler();
 	signal_handler_disconnect(sh, "media_warp_transmit", on_media_warp_transmit, nullptr);
+	signal_handler_disconnect(sh, "media_warp_receive", on_media_warp_receive, nullptr);
 
 	lws_http_server_stop();
 	lws_ws_server_stop();
