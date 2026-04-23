@@ -16,6 +16,28 @@ Perfect for HTML/CSS/JS overlays, dashboards, widgets, and any Browser Source th
 - 🎯 **Create/Update Browser Source in current scene**
 - 💾 **Persistent settings** (doc root + port)
 - 🧩 Clean, OBS‑style dock/panel UI
+- 🔗 **WebSocket Bridge & Callback API** for external app integration
+
+---
+
+## 🔗 WebSocket Bridge & Callback API
+
+This plugin includes a high-performance WebSocket bridge and an HTTP callback API to enable bidirectional communication between external apps (like Apple Shortcuts) and browser-based overlays.
+
+### Discovery API
+To find the dynamic WebSocket port from a web page:
+- **Endpoint**: `GET http://127.0.0.1:<http_port>/__lws/ws_port`
+- **Response**: The WebSocket port number (plain text).
+
+### Callback API
+External apps can push data directly to all connected WebSocket clients:
+- **Endpoint**: `POST http://127.0.0.1:<http_port>/callback`
+- **Payload**: Any string or JSON body.
+- **Action**: The server immediately broadcasts the POST body to all WebSocket clients on `/ws`.
+
+### WebSocket Endpoint
+- **URL**: `ws://127.0.0.1:<ws_port>/ws`
+- **Behavior**: Relays messages between OBS signals (`media_warp_receive`) and web clients.
 
 ---
 

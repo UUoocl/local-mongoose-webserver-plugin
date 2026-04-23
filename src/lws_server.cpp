@@ -64,6 +64,7 @@ static void http_fn(struct mg_connection *c, int ev, void *ev_data)
 {
 	if (ev == MG_EV_HTTP_MSG) {
 		struct mg_http_message *hm = (struct mg_http_message *)ev_data;
+
 		if (mg_match(hm->uri, mg_str("/__lws/health"), NULL)) {
 			mg_http_reply(c, 200, "Content-Type: text/plain\r\nAccess-Control-Allow-Origin: *\r\n", "ok");
 		} else if (mg_match(hm->uri, mg_str("/__lws/ws_port"), NULL)) {
@@ -72,13 +73,13 @@ static void http_fn(struct mg_connection *c, int ev, void *ev_data)
 			snprintf(buf, sizeof(buf), "%d", ws_port);
 			mg_http_reply(c, 200, "Content-Type: text/plain\r\nAccess-Control-Allow-Origin: *\r\n", buf);
 		} else if (mg_match(hm->uri, mg_str("/callback"), NULL)) {
-            // Received a shortcut callback!
             if (hm->body.len > 0) {
                 std::string body(hm->body.buf, hm->body.len);
-                LOGI("HTTP: Received shortcut callback: %s", body.c_str());
                 
                 // Broadcast to all connected WebSocket clients
                 lws_ws_server_broadcast(body.c_str());
+            } else {
+                LOGW("HTTP: Callback received but body is EMPTY!");
             }
             mg_http_reply(c, 200, "Content-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n", "{\"status\":\"ok\"}");
 		} else {
@@ -101,7 +102,6 @@ static void http_fn(struct mg_connection *c, int ev, void *ev_data)
             
             // Explicitly handle WASM and TASK files to fix MIME type issues
             std::string uri_str(hm->uri.buf, hm->uri.len);
-            LOGI("HTTP Request: %s", uri_str.c_str());
 
             bool is_wasm = (uri_str.find(".wasm") != std::string::npos);
             bool is_task = (uri_str.find(".task") != std::string::npos);
@@ -111,7 +111,6 @@ static void http_fn(struct mg_connection *c, int ev, void *ev_data)
                 struct mg_str file_data = mg_file_read(&mg_fs_posix, full_path.c_str());
                 if (file_data.buf != NULL) {
                     const char *mime = is_wasm ? "application/wasm" : "application/octet-stream";
-                    LOGI("Serving binary file with override: %s as %s (%zu bytes)", uri_str.c_str(), mime, file_data.len);
                     mg_printf(c, "HTTP/1.1 200 OK\r\n"
                                  "Content-Type: %s\r\n"
                                  "Content-Length: %zu\r\n"
@@ -211,7 +210,6 @@ static std::mutex g_state_mutex;
 
 static void ws_fn(struct mg_connection *c, int ev, void *ev_data)
 {
-    // LOGD("WS Event: %d on conn %lu", ev, c->id); // Too noisy, but good to know
 	if (ev == MG_EV_ACCEPT) {
 		set_tcp_nodelay(c);
 	} else if (ev == MG_EV_WS_OPEN) {
@@ -233,7 +231,6 @@ static void ws_fn(struct mg_connection *c, int ev, void *ev_data)
 			is_valid = true; // Allow clients that don't send Origin (like some CLI tools)
 		} else {
 			if (mg_match(*origin, mg_str("http://127.0.0.1:*"), NULL) ||
-			    mg_match(*origin, mg_str("http://localhost:*"), NULL) ||
 			    mg_match(*origin, mg_str("null"), NULL)) {
 				is_valid = true;
 			}
@@ -269,8 +266,9 @@ static void ws_fn(struct mg_connection *c, int ev, void *ev_data)
 			// 1. Relay to OBS signals
 			signal_handler_t *sh = obs_get_signal_handler();
 			if (sh) {
+				std::string msg_str((const char *)wm->data.buf, wm->data.len);
 				calldata_t cd = {0};
-				calldata_set_string(&cd, "json_str", (const char *)wm->data.buf);
+				calldata_set_string(&cd, "json_str", msg_str.c_str());
 				signal_handler_signal(sh, "media_warp_receive", &cd);
 				calldata_free(&cd);
 			}
@@ -358,8 +356,9 @@ bool lws_ws_server_failed() { return g_ws_failed.load(); }
 
 void lws_ws_server_broadcast(const char *message)
 {
-	if (g_ws_port.load() == 0 || g_ws_listener_id.load() == 0)
+	if (g_ws_port.load() == 0 || g_ws_listener_id.load() == 0) {
 		return;
+    }
 	mg_wakeup(&g_ws_mgr, g_ws_listener_id.load(), message, strlen(message));
 }
 
