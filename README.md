@@ -20,24 +20,28 @@ Perfect for HTML/CSS/JS overlays, dashboards, widgets, and any Browser Source th
 
 ---
 
-## 🔗 WebSocket Bridge & Callback API
+## 🔗 Unified WebSocket Bridge & Callback API
 
-This plugin includes a high-performance WebSocket bridge and an HTTP callback API to enable bidirectional communication between external apps (like Apple Shortcuts) and browser-based overlays.
+This plugin provides a high-performance **Unified Port Architecture** where HTTP and WebSockets share the same port (default `4466`).
 
-### Discovery API
-To find the dynamic WebSocket port from a web page:
-- **Endpoint**: `GET http://127.0.0.1:<http_port>/__lws/ws_port`
-- **Response**: The WebSocket port number (plain text).
+### WebSocket Routing
+The bridge uses path-based routing to separate traffic for different plugins/overlays:
+- **Generic Connection**: `ws://127.0.0.1:<port>/ws` (Subscribes to `default` topic)
+- **Topic Connection**: `ws://127.0.0.1:<port>/ws/<topic_name>` (e.g., `/ws/shortcuts`, `/ws/mouse`)
+- **Benefit**: Overlays only receive data relevant to their specific functionality, reducing browser CPU usage.
 
 ### Callback API
-External apps can push data directly to all connected WebSocket clients:
-- **Endpoint**: `POST http://127.0.0.1:<http_port>/callback`
-- **Payload**: Any string or JSON body.
-- **Action**: The server immediately broadcasts the POST body to all WebSocket clients on `/ws`.
+External apps can push data directly to specific WebSocket topics via HTTP POST:
+- **Endpoint**: `POST http://127.0.0.1:<port>/callback?topic=<topic_name>`
+- **Behavior**: The server broadcasts the POST body to all WebSocket clients subscribed to the specified topic.
+- **Default**: If no topic is provided, it broadcasts to `default`.
 
-### WebSocket Endpoint
-- **URL**: `ws://127.0.0.1:<ws_port>/ws`
-- **Behavior**: Relays messages between OBS signals (`media_warp_receive`) and web clients.
+### Simplified Client Connection
+Overlays served by the bridge should connect using `window.location.host`:
+```javascript
+const wsUrl = `ws://${window.location.host}/ws/your_topic`;
+const socket = new WebSocket(wsUrl);
+```
 
 ---
 

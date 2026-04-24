@@ -3,9 +3,9 @@
 
 struct LwsSettings {
     QString doc_root;
-    int http_port = 8089;
+    int http_port = 4466;
     bool http_enabled = true;
-    int ws_port = 8001;
+    int ws_port = 4466;
     bool ws_enabled = true;
 
     // Manual OBS connection info

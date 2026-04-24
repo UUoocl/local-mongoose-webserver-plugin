@@ -36,9 +36,9 @@ LwsSettings lws_settings_load()
         s.http_port = 4466;
 
     s.http_enabled = qs.value(key_http_enabled(), true).toBool();
-    s.ws_port = qs.value(key_ws_port(), 4477).toInt();
+    s.ws_port = qs.value(key_ws_port(), 4466).toInt();
     if (s.ws_port < 1024 || s.ws_port > 65535)
-        s.ws_port = 4477;
+        s.ws_port = 4466;
     s.ws_enabled = qs.value(key_ws_enabled(), true).toBool();
     s.obs_port = qs.value(key_obs_port(), 4455).toInt();
     s.obs_password = qs.value(key_obs_password(), QString()).toString();
